@@ -2,19 +2,21 @@ services:
   testpoint:
     build:
       context: ./testpoint
+      dockerfile: Dockerfile
     container_name: testpoint
     networks:
-      - mxc-net
+      - tacia-net
     volumes:
-      - "../testpoint:/testpoint"  # Volume pour le script de test
+      - "../testpoint:/testpoint"  # Volume for test script
     tty: true
 
   backend-js:
     build:
-      context: ./backend-js
+      context: ../backend-js
+      dockerfile: Dockerfile
     container_name: backend-js
     networks:
-      - mxc-net
+      - tacia-net
     ports:
       - "7070:7070"
     volumes:
@@ -22,6 +24,31 @@ services:
     environment:
       - NODE_ENV=production
 
+  backend-java:
+    build:
+      context: ../backend-java
+      dockerfile: Dockerfile
+    container_name: backend-java
+    networks:
+      - tacia-net
+    ports:
+      - "7070:7070"
+    volumes:
+      - "../DATA/content:/content"
+    environment:
+      - JAVA_OPTS=-Xmx512m
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    networks:
+      - tacia-net
+    ports:
+      - "80:80"
+      - "443:443"
+
 networks:
-  mxc-net:
+  tacia-net:
     driver: bridge
