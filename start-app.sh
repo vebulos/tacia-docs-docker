@@ -34,7 +34,7 @@ print_error() {
     exit 1
 }
 
-# --- 1. Validate Script Arguments ---
+# --- 0. Validate Script Arguments ---
 if [ "$#" -ne 2 ]; then
     print_error "Usage: $0 [js|java] <path_to_content_directory>"
 fi
@@ -52,11 +52,22 @@ if [ ! -d "$CONTENT_DIR_PATH" ]; then
     print_error "Content directory not found at: $CONTENT_DIR_PATH"
 fi
 
+# --- 1. Environment Cleanup and Setup ---
+echo -e "${YELLOW}Cleaning existing Docker resources...${NC}"
+./clean-docker.sh
+
 # --- 2. Set Environment Variables ---
 print_msg "Setting up environment variables"
 export BACKEND_SERVICE="backend-$BACKEND_TYPE"
 # Resolve the absolute path for the content directory to avoid issues with Docker volumes
-export CONTENT_DIR_HOST=$(cd "$CONTENT_DIR_PATH" && pwd)
+
+if [[ "$OSTYPE" == cygwin* || "$OSTYPE" == msys* || "$OSTYPE" == win32* ]]; then
+    # Use cygpath to convert to Windows path
+    CONTENT_DIR_HOST_WIN=$(cygpath -w "$CONTENT_DIR_PATH")
+    export CONTENT_DIR_HOST="$CONTENT_DIR_HOST_WIN"
+else
+    export CONTENT_DIR_HOST=$(cd "$CONTENT_DIR_PATH" && pwd)
+fi
 
 echo "Backend Service: $BACKEND_SERVICE"
 echo "Content Directory (Host): $CONTENT_DIR_HOST"
