@@ -1,27 +1,5 @@
-# Development stage
-FROM node:22-alpine AS development
-
-WORKDIR /app
-
-# Install dependencies
-COPY backend-js/package*.json ./
-RUN if [ -f package-lock.json ]; then \
-      npm ci; \
-    else \
-      npm install; \
-    fi
-
-# Copy source code
-COPY backend-js/ .
-
-# Expose port
-EXPOSE 4201 
-
-# Command to run the application
-CMD ["npm", "run", "start"]
-
 # Production stage
-FROM node:22-alpine AS production
+FROM node:22-alpine
 
 WORKDIR /app
 
@@ -36,11 +14,8 @@ RUN if [ -f package-lock.json ]; then \
 # Copy source code
 COPY backend-js/ .
 
-# Create necessary directories
-RUN mkdir -p /app/data/content
+# Expose the correct port
+EXPOSE 7070
 
-# Expose port
-EXPOSE 4201
-
-# Command to run the application
-CMD ["node", "server.js"]
+# Command to run the application with correct content-dir
+CMD ["node", "server.js", "--port=7070", "--content-dir=/content"]
