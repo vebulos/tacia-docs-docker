@@ -24,7 +24,7 @@ services:
     ports:
       - "7070:7070"
     volumes:
-      - "../DATA/content:/content"
+      - ${CONTENT_DIR_HOST}:/content
     environment:
       - NODE_ENV=production
 
@@ -39,7 +39,7 @@ services:
     ports:
       - "7070:7070"
     volumes:
-      - "../DATA/content:/content"
+      - "${CONTENT_DIR_HOST}:/content"
     environment:
       - JAVA_OPTS=-Xmx512m
 
