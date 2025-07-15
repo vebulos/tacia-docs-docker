@@ -1,5 +1,6 @@
 services:
   testpoint:
+    image: tacia-testpoint
     build:
       context: ./testpoint
       dockerfile: Dockerfile
@@ -8,9 +9,12 @@ services:
       - tacia-net
     volumes:
       - "../testpoint:/testpoint"  # Volume for test script
+    environment:
+      - BACKEND_SERVICE=${BACKEND_SERVICE}
     tty: true
 
   backend-js:
+    image: tacia-backend-js
     build:
       context: ../backend-js
       dockerfile: Dockerfile
@@ -25,6 +29,7 @@ services:
       - NODE_ENV=production
 
   backend-java:
+    image: tacia-backend-java
     build:
       context: ../backend-java
       dockerfile: Dockerfile
@@ -39,6 +44,7 @@ services:
       - JAVA_OPTS=-Xmx512m
 
   frontend:
+    image: tacia-frontend
     build:
       context: ../frontend
       dockerfile: Dockerfile
@@ -48,6 +54,9 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      - BACKEND_SERVICE=${BACKEND_SERVICE}
+
 
 networks:
   tacia-net:

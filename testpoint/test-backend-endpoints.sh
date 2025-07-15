@@ -3,7 +3,15 @@
 # Configuration
 # Usage: ./test-backend-endpoints.sh [BASE_URL]
 # BASE_URL can also be set via the BACKEND_URL environment variable
-BASE_URL="${1:-${BACKEND_URL:-http://localhost:7070/api}}"
+# Use the backend service name from environment variable
+# Check if BACKEND_SERVICE is set
+if [ -z "$BACKEND_SERVICE" ]; then
+    echo -e "\033[0;31mError: BACKEND_SERVICE environment variable is not set.\033[0m"
+    exit 1
+fi
+
+# Construct the base URL from the backend service name
+BASE_URL="http://$BACKEND_SERVICE:7070/api"
 
 # Function to test an endpoint
 function test_endpoint() {
