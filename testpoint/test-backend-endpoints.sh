@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Configuration
-# Usage: ./test-backend-endpoints.sh [BASE_URL]
-# BASE_URL can also be set via the BACKEND_URL environment variable
-# Use the backend service name from environment variable
+# Test backend endpoints ("localhost")
+# Usage: BACKEND_SERVICE=localhost ./test-backend-endpoints.sh
+
 # Check if BACKEND_SERVICE is set
 if [ -z "$BACKEND_SERVICE" ]; then
     echo -e "\033[0;31mError: BACKEND_SERVICE environment variable is not set.\033[0m"
+    echo -e "\033[0;33mUsage (por "localhost"): BACKEND_SERVICE=localhost $0\033[0m"
     exit 1
 fi
 
@@ -79,8 +79,11 @@ function get_folders() {
         sed 's/},{/}\n{/g' |             # Split each JSON object onto a new line
         grep '"isDirectory":true' |      # Filter for lines that represent directories
         grep -oP '"path":"\K[^"]+' |   # Extract the value of the "path" key
-        tr '[:upper:]' '[:lower:]' |    # Convert to lowercase for consistency
         sort -u)                         # Sort and remove duplicates
+        
+    # Debug: Show raw folder names
+    echo "Raw folder paths from API:" >&2
+    echo "$folders" >&2
     
     if [ -z "$folders" ]; then
         echo "✗ Error: No folders found in response" >&2
@@ -137,13 +140,16 @@ test_endpoint "$BASE_URL/structure/" 200 "Root directory structure"
 folders=$(get_folders "$BASE_URL/structure/")
 
 # 2. Test each folder's structure
-for folder in $folders; do
+# Use IFS= read -r to preserve spaces in folder names
+echo "$folders" | while IFS= read -r folder; do
     echo "=== Testing folder structure: $folder ==="
-    test_endpoint "$BASE_URL/structure/$folder" 200 "Folder structure: $folder"
+    # URL-encode the folder name to handle spaces and special characters
+    encoded_folder=$(url_encode "$folder")
+    test_endpoint "$BASE_URL/structure/$encoded_folder" 200 "Folder structure: $folder"
     
     # 3. Test first document in folder
     echo "=== Testing first document in folder: $folder ==="
-    first_doc_endpoint="$BASE_URL/first-document/$folder"
+    first_doc_endpoint="$BASE_URL/first-document/$encoded_folder"
     doc_path=$(get_first_document_path "$first_doc_endpoint")
     
     if [ $? -eq 0 ]; then
