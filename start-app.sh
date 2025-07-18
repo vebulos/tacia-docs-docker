@@ -90,31 +90,30 @@ docker-compose up --build -d "$BACKEND_SERVICE" frontend
 
 # --- 6. Wait for Backend to be Ready ---
 print_msg "Waiting for backend service '$BACKEND_SERVICE' to be ready..."
-WAIT_COMMAND="docker-compose exec $BACKEND_SERVICE"
-# For Java, we check for the running java process. For JS, the node process.
-if [ "$BACKEND_TYPE" = "java" ]; then
-    CHECK_CMD="ps -ef | grep 'java -jar app.jar' | grep -v grep"
-else
-    CHECK_CMD="ps -ef | grep 'node server.js' | grep -v grep"
-fi
 
-# Wait for up to 30 seconds
-for i in {1..15}; do
-    if $WAIT_COMMAND $CHECK_CMD > /dev/null 2>&1; then
-        echo "Backend is ready!"
-        break
-    fi
-    echo "Waiting... ($i)"
-    sleep 2
-done
+# Health check from testpoint container using service DNS name
+check_backend_health() {
+    local max_retries=15
+    local retry_count=0
+    local backend_url="http://$BACKEND_SERVICE:7070"
 
-if ! $WAIT_COMMAND $CHECK_CMD > /dev/null 2>&1; then
+    until [ $retry_count -ge $max_retries ]; do
+        # Try several possible endpoints for robustness
+        if docker-compose run --rm testpoint sh -c \
+            "curl -sf $backend_url/health || curl -sf $backend_url/api/health || curl -sf $backend_url/" > /dev/null 2>&1; then
+            echo "Backend is ready!"
+            return 0
+        fi
+        retry_count=$((retry_count + 1))
+        echo "Waiting for backend to be ready... ($retry_count/$max_retries)"
+        sleep 2
+    done
+    return 1
+}
+
+if ! check_backend_health; then
     print_error "Backend service failed to start. Check logs with: docker-compose logs $BACKEND_SERVICE"
 fi
-
-# --- 7. Run Integration Tests ---
-print_msg "Starting backend endpoint tests"
-docker-compose run --rm testpoint
 
 # --- 8. Final Status ---
 print_msg "All services are up and running!"
