@@ -21,8 +21,8 @@ services:
     container_name: backend-js
     networks:
       - tacia-net
-    ports:
-      - "7070:7070"
+    # ports:
+    #   - "7070:7070"
     volumes:
       - ${CONTENT_DIR_HOST}:/content
     environment:
@@ -36,8 +36,8 @@ services:
     container_name: backend-java
     networks:
       - tacia-net
-    ports:
-      - "7070:7070"
+    # ports:
+    #   - "7070:7070"
     volumes:
       - "${CONTENT_DIR_HOST}:/content"
     environment:
