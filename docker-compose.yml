@@ -1,12 +1,12 @@
 services:
   testpoint:
-    image: tacia-testpoint
+    image: tacia_testpoint
     build:
       context: ./testpoint
       dockerfile: Dockerfile
-    container_name: testpoint
+    container_name: tacia_testpoint
     networks:
-      - tacia-net
+      - tacia_net
     volumes:
       - "../testpoint:/testpoint"  # Volume for test script
     environment:
@@ -14,13 +14,13 @@ services:
     tty: true
 
   backend-js:
-    image: tacia-backend-js
+    image: tacia_backend_js
     build:
-      context: ../backend-js
+      context: ${BACKEND_PATH:-../backend-js}
       dockerfile: Dockerfile
-    container_name: backend-js
+    container_name: tacia_backend_js
     networks:
-      - tacia-net
+      - tacia_net
     # ports:
     #   - "7070:7070"
     volumes:
@@ -29,13 +29,13 @@ services:
       - NODE_ENV=production
 
   backend-java:
-    image: tacia-backend-java
+    image: tacia_backend_java
     build:
-      context: ../backend-java
+      context: ${BACKEND_PATH:-../backend-java}
       dockerfile: Dockerfile
-    container_name: backend-java
+    container_name: tacia_backend_java
     networks:
-      - tacia-net
+      - tacia_net
     # ports:
     #   - "7070:7070"
     volumes:
@@ -44,13 +44,13 @@ services:
       - JAVA_OPTS=-Xmx512m
 
   frontend:
-    image: tacia-frontend
+    image: tacia_frontend
     build:
-      context: ../frontend
+      context: ${FRONTEND_PATH:-../frontend}
       dockerfile: Dockerfile
-    container_name: frontend
+    container_name: tacia_frontend
     networks:
-      - tacia-net
+      - tacia_net
     ports:
       - "80:80"
       - "443:443"
@@ -59,5 +59,6 @@ services:
 
 
 networks:
-  tacia-net:
+  tacia_net:
+    name: tacia_net
     driver: bridge

@@ -11,13 +11,13 @@ NC='\033[0m'  # No Color
 
 echo -e "${YELLOW}=== Cleaning Docker resources ===${NC}"
 
-# Get all service names from docker directory
-SERVICE_DIRS=$(ls -d */ | sed 's#/##' | grep -E "^(testpoint|backend-js|backend-java|frontend)$")
+# Define the project prefix
+PROJECT_PREFIX="tacia"
 
 # 1. Stop and remove containers
 echo -e "${YELLOW}Stopping and removing containers...${NC}"
-# Get all containers related to our application
-CONTAINERS=$(docker ps -a --filter "name=testpoint" --filter "name=backend-js" --filter "name=backend-java" --filter "name=frontend" --format "{{.Names}}")
+# Get all containers related to our project using the prefix
+CONTAINERS=$(docker ps -a --format "{{.Names}}" | grep -E "^${PROJECT_PREFIX}[-_]")
 if [ ! -z "$CONTAINERS" ]; then
     echo -e "${YELLOW}Stopping containers...${NC}"
     docker stop $CONTAINERS 2>/dev/null
@@ -29,20 +29,18 @@ fi
 
 # 2. Remove volumes
 echo -e "${YELLOW}Removing volumes...${NC}"
-for dir in $SERVICE_DIRS; do
-    VOLUMES=$(docker volume ls -q --filter "name=^${dir}_")
-    if [ ! -z "$VOLUMES" ]; then
-        echo -e "${YELLOW}Removing volumes for $dir...${NC}"
-        echo $VOLUMES | xargs -r docker volume rm 2>/dev/null
-        echo -e "${GREEN}Volumes for $dir removed.${NC}"
-    else
-        echo -e "${GREEN}No volumes for $dir to remove.${NC}"
-    fi
-done
+VOLUMES=$(docker volume ls -q | grep -E "^${PROJECT_PREFIX}[-_]")
+if [ ! -z "$VOLUMES" ]; then
+    echo -e "${YELLOW}Removing volumes...${NC}"
+    echo $VOLUMES | xargs -r docker volume rm 2>/dev/null
+    echo -e "${GREEN}Volumes removed.${NC}"
+else
+    echo -e "${GREEN}No volumes to remove.${NC}"
+fi
 
 # 3. Remove network
-echo -e "${YELLOW}Removing network...${NC}"
-NETWORKS=$(docker network ls --format "{{.Name}}" | grep "_tacia_network")
+echo -e "${YELLOW}Removing networks...${NC}"
+NETWORKS=$(docker network ls --format "{{.Name}}" | grep -E "^${PROJECT_PREFIX}[-_]")
 if [ ! -z "$NETWORKS" ]; then
     echo -e "${YELLOW}Removing networks...${NC}"
     for network in $NETWORKS; do
@@ -55,21 +53,35 @@ fi
 
 # 4. Remove images
 echo -e "${YELLOW}Removing images...${NC}"
-for dir in $SERVICE_DIRS; do
-    IMAGES=$(docker images -q "*${dir}*" 2>/dev/null)
-    if [ ! -z "$IMAGES" ]; then
-        echo -e "${YELLOW}Removing images for $dir...${NC}"
-        docker rmi -f $IMAGES 2>/dev/null
-        echo -e "${GREEN}Images for $dir removed.${NC}"
-    else
-        echo -e "${GREEN}No images for $dir to remove.${NC}"
-    fi
-done
+IMAGES=$(docker images --format "{{.Repository}} {{.ID}}" | grep -E "^${PROJECT_PREFIX}[-_]" | awk '{print $2}' | sort -u)
+if [ ! -z "$IMAGES" ]; then
+    echo -e "${YELLOW}Removing images...${NC}"
+    docker rmi -f $IMAGES 2>/dev/null || true
+    echo -e "${GREEN}Images removed.${NC}"
+else
+    echo -e "${GREEN}No images to remove.${NC}"
+fi
 
 echo -e "${GREEN}All Docker resources cleaned.${NC}"
 # 5. Clean up dangling resources
 echo -e "${YELLOW}Cleaning up dangling resources...${NC}"
-docker system prune -f --filter "label=com.docker.compose.project=$PROJECT_NAME" 2>/dev/null
+docker system prune -f --filter "label=com.docker.compose.project=${PROJECT_PREFIX}" 2>/dev/null
 echo -e "${GREEN}Dangling resources cleaned.${NC}"
+
+# 6. Remove Docker build cache
+echo -e "${YELLOW}Cleaning Docker build cache...${NC}"
+docker builder prune -af 2>/dev/null
+
+# 7. Remove all Docker buildx builders
+echo -e "${YELLOW}Removing all Docker buildx builders...${NC}"
+BUILDERS=$(docker buildx ls | awk 'NR>1 {print $1}')
+if [ ! -z "$BUILDERS" ]; then
+    for builder in $BUILDERS; do
+        docker buildx rm -f "$builder" 2>/dev/null || true
+    done
+    echo -e "${GREEN}All buildx builders removed.${NC}"
+else
+    echo -e "${GREEN}No buildx builders to remove.${NC}"
+fi
 
 echo -e "${GREEN}=== Cleanup completed ===${NC}"

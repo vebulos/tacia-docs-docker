@@ -5,8 +5,8 @@
 # This script builds and starts the Docker environment for the TaciaDocs application.
 # It allows selecting a backend (js or java) and specifying the content directory.
 #
-# Usage: ./start-app.sh [js|java] <path_to_content_directory>
-# Example: ./start-app.sh js ../DATA/content
+# Usage: ./start-app.sh <frontend_path> <backend_path> <content_path>
+# Example: ./start-app.sh ../frontend ../backend-js ../DATA/content
 
 # --- Configuration & Setup ---
 # Strict mode: exit on error, undefined variable, or pipe failure
@@ -35,17 +35,27 @@ print_error() {
 }
 
 # --- 0. Validate Script Arguments ---
-if [ "$#" -ne 2 ]; then
-    print_error "Usage: $0 [js|java] <path_to_content_directory>"
+if [ "$#" -ne 3 ]; then
+    print_error "Usage: $0 <frontend_path> <backend_path> <content_path>"
 fi
 
-BACKEND_TYPE=$1
-CONTENT_DIR_PATH=$2
+FRONTEND_PATH=$1
+BACKEND_PATH=$2
+CONTENT_DIR_PATH=$3
 
-# Validate backend service type
-if [ "$BACKEND_TYPE" != "js" ] && [ "$BACKEND_TYPE" != "java" ]; then
-    print_error "Invalid backend service specified. Use 'js' or 'java'."
-fi
+# Validate paths
+for path in "$FRONTEND_PATH" "$BACKEND_PATH" "$CONTENT_DIR_PATH"; do
+    if [ ! -d "$path" ]; then
+        print_error "Directory not found: $path"
+    fi
+    
+    # Convert to absolute path
+    if [[ "$OSTYPE" == cygwin* || "$OSTYPE" == msys* || "$OSTYPE" == win32* ]]; then
+        path=$(cygpath -w "$(cd "$path" && pwd)")
+    else
+        path=$(cd "$path" && pwd)
+    fi
+done
 
 # Validate content directory exists
 if [ ! -d "$CONTENT_DIR_PATH" ]; then
@@ -58,18 +68,17 @@ echo -e "${YELLOW}Cleaning existing Docker resources...${NC}"
 
 # --- 2. Set Environment Variables ---
 print_msg "Setting up environment variables"
-export BACKEND_SERVICE="backend-$BACKEND_TYPE"
-# Resolve the absolute path for the content directory to avoid issues with Docker volumes
 
-if [[ "$OSTYPE" == cygwin* || "$OSTYPE" == msys* || "$OSTYPE" == win32* ]]; then
-    # Use cygpath to convert to Windows path
-    CONTENT_DIR_HOST_WIN=$(cygpath -w "$CONTENT_DIR_PATH")
-    export CONTENT_DIR_HOST="$CONTENT_DIR_HOST_WIN"
-else
-    export CONTENT_DIR_HOST=$(cd "$CONTENT_DIR_PATH" && pwd)
-fi
+# Extract service name from backend path
+BACKEND_SERVICE_NAME=$(basename "$BACKEND_PATH")
+export BACKEND_SERVICE="$BACKEND_SERVICE_NAME"
+
+# Set content directory path
+export CONTENT_DIR_HOST="$CONTENT_DIR_PATH"
 
 echo "Backend Service: $BACKEND_SERVICE"
+echo "Frontend Path: $FRONTEND_PATH"
+echo "Backend Path: $BACKEND_PATH"
 echo "Content Directory (Host): $CONTENT_DIR_HOST"
 
 # --- 3. Create Docker Network ---
