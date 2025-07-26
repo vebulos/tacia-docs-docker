@@ -93,9 +93,21 @@ BACKEND_SERVICE=${BACKEND_SERVICE}
 CONTENT_DIR_HOST=${CONTENT_DIR_HOST}
 EOF
 
+# Function to check if docker-compose is available
+check_docker_compose() {
+    if command -v docker-compose &> /dev/null; then
+        echo "docker-compose"
+    elif docker compose version &> /dev/null; then
+        echo "docker compose"
+    else
+        print_error "Neither 'docker-compose' nor 'docker compose' command found. Please install Docker Compose."
+    fi
+}
+
 # --- 5. Start Services ---
 print_msg "Building and starting services: '$BACKEND_SERVICE' and 'frontend'"
-docker-compose up --build -d "$BACKEND_SERVICE" frontend
+DOCKER_COMPOSE_CMD=$(check_docker_compose)
+$DOCKER_COMPOSE_CMD up --build -d "$BACKEND_SERVICE" frontend
 
 # --- 6. Wait for Backend to be Ready ---
 print_msg "Waiting for backend service '$BACKEND_SERVICE' to be ready..."
@@ -108,7 +120,7 @@ check_backend_health() {
 
     until [ $retry_count -ge $max_retries ]; do
         # Try several possible endpoints for robustness
-        if docker-compose run --rm testpoint sh -c \
+        if $DOCKER_COMPOSE_CMD run --rm testpoint sh -c \
             "curl -sf $backend_url/health || curl -sf $backend_url/api/health || curl -sf $backend_url/" > /dev/null 2>&1; then
             echo "Backend is ready!"
             return 0
@@ -121,10 +133,22 @@ check_backend_health() {
 }
 
 if ! check_backend_health; then
-    print_error "Backend service failed to start. Check logs with: docker-compose logs $BACKEND_SERVICE"
+    print_error "Backend service failed to start. Check logs with: $DOCKER_COMPOSE_CMD logs $BACKEND_SERVICE"
 fi
 
 # --- 8. Final Status ---
-print_msg "All services are up and running!"
-echo -e "- Frontend is available at ${YELLOW}http://localhost${NC}"
-echo -e "- Backend ($BACKEND_SERVICE) is running and tested."
+print_msg "Detect frontend port from docker-compose.yml"
+detect_frontend_port() {
+    local port_line
+    port_line=$(awk '/frontend:/, /environment:/' docker-compose.yml | grep -E '^\s*-\s*"[0-9]+:' | head -n1)
+    if [[ $port_line =~ ([0-9]+): ]]; then
+        echo "${BASH_REMATCH[1]}"
+    else
+        echo "80"
+    fi
+}
+FRONTEND_PORT=$(detect_frontend_port)
+
+echo -e "\n--- All services are up and running! ---"
+echo "- Frontend is available at http://localhost:$FRONTEND_PORT"
+echo "- Backend ($BACKEND_SERVICE) is running and tested."
