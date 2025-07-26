@@ -82,8 +82,9 @@ echo "Backend Path: $BACKEND_PATH"
 echo "Content Directory (Host): $CONTENT_DIR_HOST"
 
 # --- 3. Create Docker Network ---
-print_msg "Ensuring Docker network 'tacia-net' exists"
-docker network create tacia-net > /dev/null 2>&1 || true
+NETWORK_NAME="tacia_net"
+print_msg "Ensuring Docker network '$NETWORK_NAME' exists"
+docker network create $NETWORK_NAME > /dev/null 2>&1 || true
 
 # --- 4. Create .env file for Docker Compose ---
 print_msg "Creating .env file for Docker Compose"
