@@ -36,7 +36,7 @@ print_error() {
 
 # --- 0. Validate Script Arguments ---
 if [ "$#" -ne 3 ]; then
-    print_error "Usage: $0 <frontend_path> <backend_path> <content_path>"
+    print_error "Parameters missing! Usage: $0 <frontend_path> <backend_path> <content_path>"
 fi
 
 FRONTEND_PATH=$1
@@ -81,10 +81,8 @@ echo "Frontend Path: $FRONTEND_PATH"
 echo "Backend Path: $BACKEND_PATH"
 echo "Content Directory (Host): $CONTENT_DIR_HOST"
 
-# --- 3. Create Docker Network ---
-NETWORK_NAME="tacia_net"
-print_msg "Ensuring Docker network '$NETWORK_NAME' exists"
-docker network create $NETWORK_NAME > /dev/null 2>&1 || true
+# --- 3. Docker Network is managed by docker-compose.yml ---
+print_msg "Docker network will be created by docker-compose if needed"
 
 # --- 4. Create .env file for Docker Compose ---
 print_msg "Creating .env file for Docker Compose"
